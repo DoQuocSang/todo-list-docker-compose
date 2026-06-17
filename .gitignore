@@ -2,3 +2,7 @@
 # .env.development
 # .env.production
 # secrets/
+
+# Repo member
+todo-list-react/
+todo-list-dotnet/
