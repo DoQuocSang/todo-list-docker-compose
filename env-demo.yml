@@ -1,0 +1,72 @@
+services:
+  db:
+    image: mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - todo_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+    networks:
+      - be-tier
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  be:
+    build:
+      context: ./todo-list-dotnet/TodoApi
+    image: sangdq02/todo-dotnet:v1
+    restart: always
+    ports:
+      - "${VITE_API_PORT}:8080"
+    environment:
+      MongoDB__ConnectionString: mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@db:27017/?authSource=admin
+      MongoDB__DatabaseName: todolist
+    networks:
+      - be-tier
+      - fe-tier
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  fe:
+    build:
+      context: ./todo-list-react
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+    image: sangdq02/todo-react:v1
+    restart: always
+    ports:
+      - "4200:80"
+    networks:
+      - fe-tier
+    # volumes:
+    #   - ./demo:/usr/share/nginx/html
+    depends_on:
+      be:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  todo_data:
+
+networks:
+  be-tier:
+  fe-tier:

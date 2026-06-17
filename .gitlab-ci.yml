@@ -1,0 +1,36 @@
+stages:
+  - build
+  - push
+
+variables:
+  TAG: $CI_PIPELINE_IID
+
+build-api:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+    - docker build -t sangdq02/todo-dotnet:$TAG -t sangdq02/todo-dotnet:latest ./todo-list-dotnet/TodoApi
+    - docker push sangdq02/todo-dotnet:$TAG
+    - docker push sangdq02/todo-dotnet:latest
+  only:
+    - main
+
+build-fe:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+    - docker build
+        -t sangdq02/todo-react:$TAG
+        -t sangdq02/todo-react:latest
+        --build-arg VITE_API_BASE_URL=$VITE_API_BASE_URL
+        ./todo-list-react
+    - docker push sangdq02/todo-react:$TAG
+    - docker push sangdq02/todo-react:latest
+  only:
+    - main
